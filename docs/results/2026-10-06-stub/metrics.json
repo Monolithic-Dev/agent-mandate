@@ -1,0 +1,102 @@
+{
+  "naive": {
+    "runs": 20,
+    "probes": 71,
+    "unauthorised": [
+      40,
+      41
+    ],
+    "false_blocks": [
+      0,
+      30
+    ],
+    "confirm_correct": [
+      0,
+      18
+    ],
+    "explained": [
+      0,
+      0
+    ],
+    "lineage_found": [
+      0,
+      20
+    ],
+    "replay_exact": [
+      0,
+      5
+    ],
+    "latency_p50_ms": null,
+    "latency_p95_ms": null,
+    "unauthorised_by_family": {
+      "S1": 25,
+      "S2": 8,
+      "S3": 7
+    }
+  },
+  "flat": {
+    "runs": 20,
+    "probes": 71,
+    "unauthorised": [
+      15,
+      41
+    ],
+    "false_blocks": [
+      0,
+      30
+    ],
+    "confirm_correct": [
+      15,
+      18
+    ],
+    "explained": [
+      0,
+      0
+    ],
+    "lineage_found": [
+      0,
+      20
+    ],
+    "replay_exact": [
+      0,
+      5
+    ],
+    "latency_p50_ms": null,
+    "latency_p95_ms": null,
+    "unauthorised_by_family": {
+      "S2": 8,
+      "S3": 7
+    }
+  },
+  "mandate": {
+    "runs": 20,
+    "probes": 71,
+    "unauthorised": [
+      0,
+      41
+    ],
+    "false_blocks": [
+      0,
+      30
+    ],
+    "confirm_correct": [
+      18,
+      18
+    ],
+    "explained": [
+      91,
+      91
+    ],
+    "lineage_found": [
+      20,
+      20
+    ],
+    "replay_exact": [
+      5,
+      5
+    ],
+    "latency_p50_ms": 8.65440000779927,
+    "latency_p95_ms": 27.5263999938034,
+    "unauthorised_by_family": {}
+  }
+}

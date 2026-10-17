@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 360" width="1280" height="360" role="img" aria-label="Agent Mandate: authority for AI agents, kept in a graph">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b0b1e"/><stop offset=".55" stop-color="#17124a"/><stop offset="1" stop-color="#0a2a2a"/>
+    </linearGradient>
+    <linearGradient id="tile" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6366f1"/><stop offset=".6" stop-color="#8b5cf6"/><stop offset="1" stop-color="#ec4899"/>
+    </linearGradient>
+    <linearGradient id="word" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#c7c9ff"/>
+    </linearGradient>
+    <radialGradient id="glow" cx=".78" cy=".45" r=".5">
+      <stop offset="0" stop-color="#6366f1" stop-opacity=".45"/><stop offset="1" stop-color="#6366f1" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="dots" width="22" height="22" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="1" fill="#fff" fill-opacity=".07"/></pattern>
+    <filter id="soft" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="6"/></filter>
+  </defs>
+  <rect width="1280" height="360" fill="url(#bg)"/>
+  <rect width="1280" height="360" fill="url(#dots)"/>
+  <rect width="1280" height="360" fill="url(#glow)"/>
+
+  <!-- the graph -->
+  <g stroke-linecap="round" fill="none">
+    <path d="M880 120 1010 90M880 120 960 235M1010 90 1130 175M960 235 1130 175M1130 175 1190 90M960 235 1060 300" stroke="#fff" stroke-opacity=".22" stroke-width="2"/>
+    <path d="M880 120 1010 90 1130 175" stroke="#a5b4fc" stroke-width="3"/>
+    <path d="M960 235 1130 175" stroke="#f472b6" stroke-width="2.5" stroke-dasharray="6 7"/>
+  </g>
+  <g font-family="Inter, 'Segoe UI', system-ui, sans-serif" font-size="14" font-weight="600" fill="#e5e7ff" text-anchor="middle">
+    <circle cx="880" cy="120" r="30" fill="#34d399" opacity=".35" filter="url(#soft)"/>
+    <circle cx="880" cy="120" r="15" fill="#34d399"/><text x="880" y="154">Owner</text>
+    <circle cx="1010" cy="90" r="12" fill="#818cf8"/><text x="1010" y="122">Rule</text>
+    <circle cx="1130" cy="175" r="30" fill="#38bdf8" opacity=".35" filter="url(#soft)"/>
+    <circle cx="1130" cy="175" r="15" fill="#38bdf8"/><text x="1130" y="210">Agent</text>
+    <circle cx="960" cy="235" r="12" fill="#818cf8"/><text x="960" y="267">Rule</text>
+    <circle cx="1190" cy="90" r="10" fill="#f87171"/><text x="1190" y="120">Email</text>
+    <circle cx="1060" cy="300" r="10" fill="#9ca3af"/><text x="1060" y="332">Email</text>
+  </g>
+
+  <!-- the mark and the words -->
+  <g transform="translate(72 70)">
+    <rect width="64" height="64" rx="16" fill="url(#tile)"/>
+    <g transform="scale(2)" fill="none">
+      <path d="M16 4.5 25.5 8.2V15.6C25.5 21 21.7 25 16 27.5 10.3 25 6.5 21 6.5 15.6V8.2Z" fill="#fff"/>
+      <path d="M16 12.2 11.8 19.2M16 12.2 20.2 19.2M11.8 19.2H20.2" stroke="#4f46e5" stroke-width="1.3" stroke-linecap="round"/>
+      <circle cx="16" cy="12.2" r="2.3" fill="#4f46e5"/><circle cx="11.8" cy="19.2" r="1.8" fill="#8b5cf6"/><circle cx="20.2" cy="19.2" r="1.8" fill="#ec4899"/>
+    </g>
+  </g>
+  <g font-family="Inter, 'Segoe UI', system-ui, sans-serif">
+    <text x="156" y="118" font-size="52" font-weight="800" letter-spacing="-1.5" fill="url(#word)">Agent Mandate</text>
+    <text x="72" y="196" font-size="30" font-weight="600" fill="#ffffff">Authority for AI agents, kept in a graph.</text>
+    <text x="72" y="238" font-size="19" fill="#b8bbe6">An action runs only if a graph holds a chain from what the owner said.</text>
+    <text x="72" y="266" font-size="19" fill="#b8bbe6">Every allow, hold and deny comes with the chain, checked.</text>
+    <g font-size="15" font-weight="600">
+      <rect x="72" y="296" width="106" height="30" rx="15" fill="#fff" fill-opacity=".1" stroke="#fff" stroke-opacity=".2"/><text x="125" y="316" fill="#e5e7ff" text-anchor="middle">FalkorDB</text>
+      <rect x="190" y="296" width="92" height="30" rx="15" fill="#fff" fill-opacity=".1" stroke="#fff" stroke-opacity=".2"/><text x="236" y="316" fill="#e5e7ff" text-anchor="middle">MIT</text>
+      <rect x="294" y="296" width="196" height="30" rx="15" fill="#fff" fill-opacity=".1" stroke="#fff" stroke-opacity=".2"/><text x="392" y="316" fill="#e5e7ff" text-anchor="middle">Team Code Blooded</text>
+    </g>
+  </g>
+</svg>

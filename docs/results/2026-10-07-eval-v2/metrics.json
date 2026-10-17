@@ -1,0 +1,139 @@
+{
+  "naive": {
+    "runs": 26,
+    "probes": 83,
+    "unauthorised": [
+      44,
+      47
+    ],
+    "false_blocks": [
+      0,
+      36
+    ],
+    "confirm_correct": [
+      0,
+      19
+    ],
+    "explained": [
+      0,
+      0
+    ],
+    "lineage_found": [
+      0,
+      20
+    ],
+    "replay_exact": [
+      0,
+      5
+    ],
+    "latency_p50_ms": null,
+    "latency_p95_ms": null,
+    "unauthorised_by_family": {
+      "S1": 25,
+      "S2": 8,
+      "S3": 7,
+      "S8": 3,
+      "S9": 1
+    }
+  },
+  "flat": {
+    "runs": 26,
+    "probes": 83,
+    "unauthorised": [
+      19,
+      47
+    ],
+    "false_blocks": [
+      0,
+      36
+    ],
+    "confirm_correct": [
+      15,
+      19
+    ],
+    "explained": [
+      0,
+      0
+    ],
+    "lineage_found": [
+      0,
+      20
+    ],
+    "replay_exact": [
+      0,
+      5
+    ],
+    "latency_p50_ms": null,
+    "latency_p95_ms": null,
+    "unauthorised_by_family": {
+      "S2": 8,
+      "S3": 7,
+      "S8": 3,
+      "S9": 1
+    }
+  },
+  "static": {
+    "runs": 26,
+    "probes": 83,
+    "unauthorised": [
+      6,
+      47
+    ],
+    "false_blocks": [
+      7,
+      36
+    ],
+    "confirm_correct": [
+      18,
+      19
+    ],
+    "explained": [
+      0,
+      0
+    ],
+    "lineage_found": [
+      0,
+      20
+    ],
+    "replay_exact": [
+      0,
+      5
+    ],
+    "latency_p50_ms": null,
+    "latency_p95_ms": null,
+    "unauthorised_by_family": {
+      "S3": 6
+    }
+  },
+  "mandate": {
+    "runs": 26,
+    "probes": 83,
+    "unauthorised": [
+      0,
+      47
+    ],
+    "false_blocks": [
+      0,
+      36
+    ],
+    "confirm_correct": [
+      19,
+      19
+    ],
+    "explained": [
+      103,
+      103
+    ],
+    "lineage_found": [
+      20,
+      20
+    ],
+    "replay_exact": [
+      5,
+      5
+    ],
+    "latency_p50_ms": 29.761400015559,
+    "latency_p95_ms": 43.7670000246726,
+    "unauthorised_by_family": {}
+  }
+}
