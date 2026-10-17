@@ -1,0 +1,2 @@
+MATCH (u:User {email: $email})
+RETURN u
