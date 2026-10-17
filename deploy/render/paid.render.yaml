@@ -1,0 +1,62 @@
+# The three-service Render setup (console, private API, FalkorDB with a disk). It needs paid plans:
+# for a free deployment use the render.yaml at the repository root instead.
+#
+# Agent Mandate on Render: a Blueprint (New > Blueprint, with this file as the blueprint path).
+#
+#   console (public, HTTPS)  ->  api (private)  ->  db (private, with a disk)
+#
+# Only the console is reachable from the internet. People sign in; there is no shared key in the
+# browser. After the first deploy:
+#   1. Set MANDATE_PUBLIC_URL on the api to the console's address (approval links use it).
+#   2. In the api's Shell:   python -m mandate.seed
+#                            MANDATE_NEW_PASSWORD='a long passphrase' \
+#                              python -m mandate.users add you@example.com --name You --role admin
+# The private services and the disk need a paid plan; "starter" is the smallest.
+services:
+  - type: pserv
+    name: mandate-db
+    runtime: docker
+    dockerfilePath: ./deploy/render/falkordb/Dockerfile
+    dockerContext: ./deploy/render/falkordb
+    plan: starter
+    disk:
+      name: falkordb-data
+      mountPath: /var/lib/falkordb/data
+      sizeGB: 1
+    envVars:
+      - key: FALKORDB_PASSWORD
+        generateValue: true
+
+  - type: pserv
+    name: mandate-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: starter
+    envVars:
+      - key: MANDATE_API_KEY
+        generateValue: true
+      - key: FALKORDB_HOST
+        fromService: { type: pserv, name: mandate-db, property: host }
+      - key: FALKORDB_PORT
+        value: "6379"
+      - key: FALKORDB_PASSWORD
+        fromService: { type: pserv, name: mandate-db, envVarKey: FALKORDB_PASSWORD }
+      - key: MANDATE_COOKIE_SECURE
+        value: "true"
+      - key: MANDATE_PUBLIC_URL
+        sync: false # the console's address, once you know it
+      - key: MANDATE_LOG_LEVEL
+        value: INFO
+
+  - type: web
+    name: mandate-console
+    runtime: docker
+    dockerfilePath: ./ui/Dockerfile
+    dockerContext: ./ui
+    plan: starter
+    healthCheckPath: /
+    envVars:
+      - key: MANDATE_API_UPSTREAM # host:port of the private api
+        fromService: { type: pserv, name: mandate-api, property: hostport }
+      - key: MANDATE_UI_KEY # empty: people sign in
+        value: ""

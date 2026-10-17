@@ -1,0 +1,96 @@
+# Full stack for a server or a demo machine: FalkorDB (password, no published port), the API
+# and the web console.
+#
+#   export MANDATE_API_KEY=$(openssl rand -hex 24)
+#   export FALKORDB_PASSWORD=$(openssl rand -hex 24)
+#   docker compose -p mandate-prod -f docker-compose.prod.yml up -d --build --wait
+#   docker compose -p mandate-prod -f docker-compose.prod.yml exec api python -m mandate.seed
+#   MANDATE_NEW_PASSWORD='a long passphrase' docker compose -p mandate-prod #     -f docker-compose.prod.yml exec -e MANDATE_NEW_PASSWORD api #     python -m mandate.users add you@example.com --name You --role admin
+#   python scripts/smoke.py http://127.0.0.1:8000 "$MANDATE_API_KEY"
+#   open http://127.0.0.1:8080 (the console) and sign in
+#
+# Terminate TLS in front of the API and the console (a reverse proxy or the platform); do
+# not publish them raw. The session cookie is Secure: browsers accept it over HTTPS and on
+# localhost. Setting MANDATE_UI_KEY instead makes the console sign everyone in with that key
+# (no login); only do that on localhost.
+services:
+  falkordb:
+    image: falkordb/falkordb:6.0.1
+    environment:
+      FALKORDB_PASSWORD: ${FALKORDB_PASSWORD:?set FALKORDB_PASSWORD}
+      REDIS_ARGS: "--requirepass ${FALKORDB_PASSWORD} --appendonly yes"
+    volumes:
+      - falkordb_data:/var/lib/falkordb/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli --no-auth-warning -a \"$$FALKORDB_PASSWORD\" ping | grep -q PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks: [backend]
+    # No ports: only containers on the backend network can reach the database.
+    restart: unless-stopped
+
+  api:
+    build: .
+    image: agent-mandate:local
+    environment:
+      MANDATE_API_KEY: ${MANDATE_API_KEY:?set MANDATE_API_KEY}
+      MANDATE_API_KEYS: ${MANDATE_API_KEYS:-}
+      MANDATE_TOKEN_SECRETS: ${MANDATE_TOKEN_SECRETS:-}
+      MANDATE_SESSION_TTL_SECONDS: ${MANDATE_SESSION_TTL_SECONDS:-43200}
+      MANDATE_SESSION_IDLE_SECONDS: ${MANDATE_SESSION_IDLE_SECONDS:-7200}
+      MANDATE_COOKIE_SECURE: ${MANDATE_COOKIE_SECURE:-true}
+      MANDATE_PUBLIC_URL: ${MANDATE_PUBLIC_URL:-}
+      MANDATE_NOTIFY_INTERVAL_SECONDS: ${MANDATE_NOTIFY_INTERVAL_SECONDS:-3}
+      FALKORDB_HOST: falkordb
+      FALKORDB_PORT: "6379"
+      FALKORDB_PASSWORD: ${FALKORDB_PASSWORD}
+      MANDATE_LOG_LEVEL: ${MANDATE_LOG_LEVEL:-INFO}
+      MANDATE_RESULTS_DIR: /results
+    volumes:
+      - ./docs/results:/results:ro  # what GET /v1/eval/latest reads
+    ports:
+      - "127.0.0.1:${API_PORT:-8000}:8000"
+    depends_on:
+      falkordb:
+        condition: service_healthy
+    networks: [backend]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+
+  ui:
+    build: ./ui
+    image: agent-mandate-ui:local
+    environment:
+      MANDATE_UI_KEY: ${MANDATE_UI_KEY:-}  # empty: people sign in
+      MANDATE_API_UPSTREAM: api:8000
+    ports:
+      - "127.0.0.1:${UI_PORT:-8080}:8080"
+    depends_on:
+      api:
+        condition: service_started
+    networks: [backend]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8080/"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    read_only: true
+    # Writable scratch for nginx (uid 101): its cache, its pid file, and conf.d, where the
+    # template is rendered at start-up.
+    tmpfs:
+      - /tmp:uid=101,gid=101
+      - /var/cache/nginx:uid=101,gid=101
+      - /etc/nginx/conf.d:uid=101,gid=101
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+
+networks:
+  backend:
+
+volumes:
+  falkordb_data:

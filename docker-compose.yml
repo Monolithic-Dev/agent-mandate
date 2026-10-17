@@ -1,0 +1,23 @@
+# Local development stack. Only FalkorDB runs today; the api and ui services
+# are added in Phases 4 and 7 (see docs/phases/).
+services:
+  falkordb:
+    image: falkordb/falkordb:6.0.1 # the version every result in docs/results was measured on
+    ports:
+      # Host ports are configurable because 6379 and 3000 are often taken by other projects.
+      - "127.0.0.1:${FALKORDB_PORT:-6379}:6379" # graph database
+      - "127.0.0.1:${FALKORDB_BROWSER_PORT:-3000}:3000" # FalkorDB Browser
+    volumes:
+      - falkordb_data:/var/lib/falkordb/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  # api:  (Phase 4) built from ./Dockerfile, serves /v1 and /mcp/*
+  # ui:   (Phase 7) built from ./ui/Dockerfile
+
+volumes:
+  falkordb_data:

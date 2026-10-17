@@ -1,0 +1,264 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install ruff
+      - run: ruff check .
+      - run: ruff format --check .
+
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -e ".[dev]"
+      - run: mypy
+
+  architecture:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -e ".[dev]"
+      - run: lint-imports
+
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -e ".[dev]"
+      - run: pytest tests/unit -q
+      - run: python scripts/check_spec_tests.py
+      - run: python scripts/gen_query_catalog.py --check
+
+  integration:
+    runs-on: ubuntu-latest
+    services:
+      falkordb:
+        image: falkordb/falkordb:6.0.1
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      REQUIRE_FALKORDB: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -e ".[dev]"
+      - run: pytest tests/integration -q
+
+  eval:
+    runs-on: ubuntu-latest
+    services:
+      falkordb:
+        image: falkordb/falkordb:6.0.1
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -e ".[dev]"
+      - name: Stub evaluation with threshold gate
+        run: python -m mandate.eval --out eval-results
+      - name: S5 tenant isolation (any leak fails)
+        run: python -m mandate.eval.isolation --out eval-results
+      - name: S6 concurrency (any wrong answer or error fails)
+        run: python -m mandate.eval.concurrency --out eval-results
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: eval-report
+          path: eval-results/
+
+  ui:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ui
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+
+  mutation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -e ".[dev]"
+      - name: Mutation testing of the authority engine
+        run: python scripts/mutation_test.py --workers 4 --min-score 90 --out mutation-results
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mutation-report
+          path: mutation-results/
+
+  docker:
+    runs-on: ubuntu-latest
+    env:
+      MANDATE_API_KEY: ci-smoke-key-0123456789abcdef
+      FALKORDB_PASSWORD: ci-smoke-db-password-0123456789
+      API_PORT: "8100"
+      UI_PORT: "8180"
+      E2E_EMAIL: ci-admin@example.com
+      E2E_PASSWORD: ci-admin-passphrase-0123
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build and start the production stack
+        run: docker compose -p mandate-prod -f docker-compose.prod.yml up -d --build --wait
+      - name: The installed image carries its query and scenario files
+        run: |
+          docker run --rm --entrypoint python agent-mandate:local -c "
+          import mandate, pathlib
+          p = pathlib.Path(mandate.__file__).parent
+          q = len(list((p/'graph'/'queries').glob('*.cypher')))
+          s = len(list((p/'eval'/'scenarios').glob('*.yaml')))
+          assert q > 40 and s > 20, (q, s)
+          print(q, 'queries,', s, 'scenarios')"
+      - name: Seed and smoke test
+        run: |
+          docker compose -p mandate-prod -f docker-compose.prod.yml exec -T api python -m mandate.seed
+          python scripts/smoke.py http://127.0.0.1:8100 "$MANDATE_API_KEY"
+      - name: Create the first admin from the command line
+        run: |
+          docker compose -p mandate-prod -f docker-compose.prod.yml exec -T \
+            -e MANDATE_NEW_PASSWORD="$E2E_PASSWORD" api \
+            python -m mandate.users add "$E2E_EMAIL" --name "CI Admin" --role admin
+      - name: The console asks people to sign in, and never exposes the key
+        run: |
+          curl -fsS http://127.0.0.1:8180/ | grep -q '<title>Agent Mandate</title>'
+          curl -fsS http://127.0.0.1:8180/tenants/demo | grep -q '<div id="root">'
+          # No session: the console proxy adds no key, so the API refuses.
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8180/v1/scenarios)" = 401
+          # Signed in: the session cookie is enough.
+          curl -fsS -c jar -H 'X-Mandate-Client: console' -H 'Content-Type: application/json' \
+            -d "{\"email\":\"$E2E_EMAIL\",\"password\":\"$E2E_PASSWORD\"}" \
+            http://127.0.0.1:8180/v1/auth/login | grep -q '"role":"admin"'
+          grep -q mandate_session jar
+          curl -fsS -b jar http://127.0.0.1:8180/v1/scenarios | grep -q S1_rule_lost_v1
+          # A change with the cookie but without the console header is refused (CSRF).
+          test "$(curl -s -o /dev/null -w '%{http_code}' -b jar -X POST http://127.0.0.1:8180/v1/demo/reset)" = 403
+          # Signing out ends the session on the server: the same cookie no longer works.
+          curl -fsS -b jar -H 'X-Mandate-Client: console' -X POST http://127.0.0.1:8180/v1/auth/logout
+          test "$(curl -s -o /dev/null -w '%{http_code}' -b jar http://127.0.0.1:8180/v1/scenarios)" = 401
+          for f in $(curl -fsS http://127.0.0.1:8180/ | grep -o '/assets/[^"]*\.js'); do
+            if curl -fsS "http://127.0.0.1:8180$f" | grep -q "$MANDATE_API_KEY"; then
+              echo "the API key leaked into $f"; exit 1
+            fi
+          done
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+      - name: Browser smoke tests against the stack (installed Chrome)
+        working-directory: ui
+        env:
+          E2E_BASE_URL: http://127.0.0.1:8180
+          E2E_CHANNEL: chrome
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+        run: |
+          npm ci --no-audit --no-fund
+          npx playwright test
+      - name: The database refuses unauthenticated clients
+        run: |
+          docker run --rm --network mandate-prod_backend redis:7-alpine redis-cli -h falkordb ping | grep -q NOAUTH
+      - name: Logs on failure
+        if: failure()
+        run: docker compose -p mandate-prod -f docker-compose.prod.yml logs --no-color | tail -80
+      - name: Stop
+        if: always()
+        run: docker compose -p mandate-prod -f docker-compose.prod.yml down -v
+
+  free-image:
+    # The one-container image for free hosts (deploy/free): FalkorDB, API and console together.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build it
+        run: docker build -f deploy/free/Dockerfile -t agent-mandate-free .
+      - name: Start it as a host would, with a port and admin credentials
+        run: |
+          docker run -d --name free -p 10000:10000             -e MANDATE_ADMIN_EMAIL=ci-admin@example.com             -e MANDATE_ADMIN_PASSWORD=ci-admin-passphrase-0123 agent-mandate-free
+          for i in $(seq 1 60); do curl -sf http://127.0.0.1:10000/healthz && break; sleep 2; done
+          curl -sf http://127.0.0.1:10000/healthz
+      - name: The console loads, the API refuses strangers, and the admin can sign in
+        run: |
+          curl -fsS http://127.0.0.1:10000/ | grep -q '<title>Agent Mandate</title>'
+          curl -fsS http://127.0.0.1:10000/tenants/demo | grep -q '<div id="root">'
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:10000/v1/scenarios)" = 401
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:10000/v1/nothing)" = 404
+          curl -fsS -c jar -H 'Content-Type: application/json' -H 'X-Mandate-Client: console'             -d '{"email":"ci-admin@example.com","password":"ci-admin-passphrase-0123"}'             http://127.0.0.1:10000/v1/auth/login
+          curl -fsS -b jar http://127.0.0.1:10000/v1/tenants | grep -q '"demo"'
+      - if: failure()
+        run: docker logs free
+
+  secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # scan the whole history, not just the tip
+      - name: gitleaks
+        run: docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:latest detect --source /repo --no-banner --redact
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Known vulnerabilities in dependencies
+        run: |
+          python -m pip install --upgrade pip  # the audit covers pip itself too
+          pip install . pip-audit
+          pip-audit --skip-editable --progress-spinner off

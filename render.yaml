@@ -1,0 +1,31 @@
+# Agent Mandate on Render's FREE plan: one web service that runs FalkorDB, the API and the
+# console together (deploy/free/Dockerfile). New > Blueprint, point it at this repository.
+#
+# Free means: no card, HTTPS, and the service sleeps after about 15 minutes without a visit
+# (the first visit afterwards takes about a minute to wake it). The database is in memory, so
+# it starts empty each time: the container seeds the demo tenant and creates your admin on
+# every start. It is a demo deployment. For a persistent one, see
+# deploy/render/paid.render.yaml.
+#
+# When Render asks for the two values below, choose your own: you sign in with them.
+services:
+  - type: web
+    name: agent-mandate
+    runtime: docker
+    plan: free
+    dockerfilePath: ./deploy/free/Dockerfile
+    dockerContext: .
+    healthCheckPath: /healthz
+    envVars:
+      - key: MANDATE_ADMIN_EMAIL
+        sync: false
+      - key: MANDATE_ADMIN_PASSWORD # at least 12 characters
+        sync: false
+      - key: MANDATE_DEMO_EMAIL # optional: a visitor account (operator), for judges
+        sync: false
+      - key: MANDATE_DEMO_PASSWORD # at least 12 characters
+        sync: false
+      - key: MANDATE_API_KEY # for scripts; people sign in
+        generateValue: true
+      - key: MANDATE_LOG_LEVEL
+        value: INFO
