@@ -1,0 +1,46 @@
+id: S4_bad_authority_v4
+description: A mistaken rule authorised several actions; trace and replay them.
+timeline:
+- t: 0
+  event: owner_say
+  text: You may issue refunds up to $500.
+- t: 100000
+  event: owner_say
+  text: You may issue refunds up to $5000.
+- t: 101000
+  event: decide
+  action_type: refund.issue
+  resource: order/80
+  args:
+    amount: 100
+  expect: allow
+- t: 101001
+  event: decide
+  action_type: refund.issue
+  resource: order/81
+  args:
+    amount: 200
+  expect: allow
+- t: 101002
+  event: decide
+  action_type: refund.issue
+  resource: order/82
+  args:
+    amount: 300
+  expect: allow
+- t: 101003
+  event: decide
+  action_type: refund.issue
+  resource: order/83
+  args:
+    amount: 400
+  expect: allow
+- t: 200000
+  event: lineage_probe
+  rule_index: 1
+  affected:
+  - 0
+  - 1
+  - 2
+  - 3
+  flips: {}
