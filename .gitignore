@@ -1,0 +1,41 @@
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Node
+node_modules/
+dist/
+.vite/
+
+# Local data and logs (root-level only: tests/data holds committed fixtures)
+/data/
+*.log
+eval/results/
+
+# Editor and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.whl
+
+# Playwright
+ui/test-results/
+ui/playwright-report/
+
+# Playwright's saved sign-in (a live session cookie)
+ui/e2e/.auth/
+/test-results/
