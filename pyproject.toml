@@ -1,0 +1,128 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agent-mandate"
+version = "0.0.0"
+description = "An action gateway for AI agents: every action must trace to a trusted human instruction through a graph."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Code Blooded (Mahakisore, Ramkumar)" }]
+requires-python = ">=3.12"
+dependencies = [
+    "falkordb",
+    "fastapi>=0.110",
+    "uvicorn[standard]",
+    "pydantic>=2",
+    "pydantic-settings>=2",
+    "structlog",
+    "mcp>=2",
+    "anthropic",
+    "httpx",
+    "prometheus-client",
+    "pyyaml",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+    "pytest-asyncio",
+    "hypothesis",
+    "ruff",
+    "mypy",
+    "coverage",
+    "types-PyYAML",
+    "import-linter",
+]
+otel = [
+    "opentelemetry-api",
+    "opentelemetry-sdk",
+]
+bench = [
+    "agentdojo",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+# Non-Python files the product needs at run time; without these a normal (non-editable)
+# install has no queries and cannot talk to the graph.
+[tool.setuptools.package-data]
+mandate = ["graph/queries/*.cypher", "eval/scenarios/*.yaml"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+# Docs contain illustrative code blocks; do not lint or format them.
+extend-exclude = ["docs"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["tests"]
+asyncio_mode = "auto"
+markers = [
+    "integration: needs a running FalkorDB",
+    "scenario: runs evaluation scenarios",
+]
+
+[tool.mypy]
+python_version = "3.12"
+files = ["src/mandate"]
+ignore_missing_imports = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+disallow_untyped_defs = true
+
+# Architecture rules (ADR-015, docs/design-patterns.md). Checked in CI with `lint-imports`.
+[tool.importlinter]
+root_package = "mandate"
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+name = "Domain logic is pure: no adapters, interfaces or I/O frameworks"
+type = "forbidden"
+source_modules = ["mandate.models", "mandate.authority"]
+forbidden_modules = [
+    "mandate.graph",
+    "mandate.api",
+    "mandate.gateway",
+    "mandate.mcp_servers",
+    "mandate.observability",
+    "mandate.agents",
+    "mandate.llm",
+    "mandate.eval",
+    "falkordb",
+    "fastapi",
+    "anthropic",
+    "mcp",
+    "httpx",
+    "prometheus_client",
+]
+
+[[tool.importlinter.contracts]]
+name = "The graph adapter does not depend on interfaces or agents"
+type = "forbidden"
+source_modules = ["mandate.graph"]
+forbidden_modules = [
+    "mandate.api",
+    "mandate.gateway",
+    "mandate.mcp_servers",
+    "mandate.agents",
+    "mandate.eval",
+]
+
+[[tool.importlinter.contracts]]
+name = "Agents reach the system only through the gateway, never the graph or the engine"
+type = "forbidden"
+source_modules = ["mandate.agents"]
+forbidden_modules = [
+    "mandate.graph",
+    "mandate.authority",
+    "mandate.api",
+    "mandate.mcp_servers",
+]

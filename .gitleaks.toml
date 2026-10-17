@@ -1,0 +1,19 @@
+# Secret scanning config (gitleaks). The default rules stay on; only the fixed fake
+# credentials below are allowed, because they exist to be wrong: the key the isolation probe
+# sends to an in-memory app, the secret that signs agent tokens in an integration test, and
+# the throwaway key, database password and admin passphrase the CI job gives the production
+# stack it builds and destroys within the same run.
+title = "agent-mandate"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Fixed fake credentials used only by tests, the isolation probe and the CI stack"
+regexes = [
+  '''isolation-probe-key-0123456789''',
+  '''integration-secret-0123456789''',
+  '''ci-smoke-key-0123456789abcdef''',
+  '''ci-smoke-db-password-0123456789''',
+  '''ci-admin-passphrase-0123''',
+]
